@@ -2,6 +2,7 @@ import * as codedeploy from "@aws-cdk/aws-codedeploy";
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as cdk from "@aws-cdk/core";
 import * as iam from "@aws-cdk/aws-iam";
+import { PolicyStatement } from "@aws-cdk/aws-iam";
 
 export interface LambdaStackProps extends cdk.StackProps {
   project_code: string;
@@ -47,6 +48,12 @@ export class LambdaStack extends cdk.Stack {
       iam.ManagedPolicy.fromAwsManagedPolicyName(
         "AmazonEC2ContainerRegistryPowerUser"
       )
+    );
+    func.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ecr:CreateRepository"],
+        resources: ["*"],
+      })
     );
 
     const alias = new lambda.Alias(this, "LambdaAlias", {

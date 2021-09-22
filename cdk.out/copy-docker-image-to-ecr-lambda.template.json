@@ -47,6 +47,30 @@
         "aws:cdk:path": "copy-docker-image-to-ecr-lambda/copy-docker-image-to-ecr-lambda/ServiceRole/Resource"
       }
     },
+    "copydockerimagetoecrlambdaServiceRoleDefaultPolicy2EFBB84E": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "ecr:CreateRepository",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "copydockerimagetoecrlambdaServiceRoleDefaultPolicy2EFBB84E",
+        "Roles": [
+          {
+            "Ref": "copydockerimagetoecrlambdaServiceRole980D1CC6"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/copy-docker-image-to-ecr-lambda/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
     "copydockerimagetoecrlambda575DB5C1": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
@@ -78,6 +102,7 @@
         "Runtime": "python3.8"
       },
       "DependsOn": [
+        "copydockerimagetoecrlambdaServiceRoleDefaultPolicy2EFBB84E",
         "copydockerimagetoecrlambdaServiceRole980D1CC6"
       ],
       "Metadata": {
@@ -213,7 +238,7 @@
     "CDKMetadata": {
       "Type": "AWS::CDK::Metadata",
       "Properties": {
-        "Analytics": "v2:deflate64:H4sIAAAAAAAA/12QuwoCMRBFv8U+jq4ItoqijYWsYD8mI0TzWPJQJOTf3ey6KlZz58zlFFNBNZvBdLTEhx9zcZskbh1BOgbkN7a+mAM61BTIsZq8jY4TW1vjg4s8lPuXXkx7EDJIazIruqRQnwVC2kbDCy6dTz6R8282xJWS6AvoQmYSNaTaqk5eZmbcChLUKPuEtO/0q6ZRkuPg/137wqarazJh52xsSukP5ZyZacVw9ZN7NYdq0X7k6qUcu2iC1AR1P19ThNIuLgEAAA=="
+        "Analytics": "v2:deflate64:H4sIAAAAAAAA/12QzYoCMRCEn8V7bB1Z8Koo7mUPMgve26SFaJIe8rOLhLy7k6i74qkrXxXVTTroFguYT1b4G6ZSXWZZsifI3xHlRWxObo8eLUXyoqfAyUsSG3Yh+iRj9f/pyY2G0lGzK6LWZYP2qBDyLjlZcc386QP58GBPuTYaQwVNFKHRQu7ZtPI292y0vLa7mipCsiJFg+Er5K+2bz0Mo4XPha/Pe2Db4pZc/PSchhp6Q6UU4cZiOIfZT/cB3XL8onPQeuqTi9oS9Pd5A7dOkz4/AQAA"
       },
       "Metadata": {
         "aws:cdk:path": "copy-docker-image-to-ecr-lambda/CDKMetadata/Default"
