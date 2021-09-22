@@ -20,6 +20,7 @@ Wellcome users: run this script as
 [1]: https://www.docker.com/blog/what-you-need-to-know-about-upcoming-docker-hub-rate-limiting/
 """
 
+import docker
 import base64
 import subprocess
 import os
@@ -53,36 +54,6 @@ def get_ecr_repo_names_in_account(ecr_client, *, account_id):
     return repo_names
 
 
-def docker_login_to_ecr(ecr_client, *, account_id):
-    """
-    Authenticate Docker against the ECR repository in a particular account.
-    The authorization token obtained from ECR is good for twelve hours, so this
-    function is cached to save repeatedly getting a token and running `docker login`
-    in quick succession.
-    """
-    response = ecr_client.get_authorization_token(registryIds=[account_id])
-
-    try:
-        auth = response["authorizationData"][0]
-    except (IndexError, KeyError):
-        raise RuntimeError("Unable to get authorization token from ECR!")
-
-    auth_token = base64.b64decode(auth["authorizationToken"]).decode()
-    username, password = auth_token.split(":")
-
-    cmd = [
-        "docker",
-        "login",
-        "--username",
-        username,
-        "--password",
-        password,
-        auth["proxyEndpoint"],
-    ]
-
-    subprocess.check_call(cmd)
-
-
 def create_ecr_repository(ecr_client, *, name):
     """
     Create a new ECR repository.
@@ -96,14 +67,7 @@ def create_ecr_repository(ecr_client, *, name):
             raise
 
 
-def docker(*args):
-    """
-    Shell out to the Docker CLI.
-    """
-    subprocess.check_call(["docker"] + list(args))
-
-
-def mirror_docker_hub_images_to_ecr(ecr_client, *, account_id, image_tags):
+def mirror_docker_hub_images_to_ecr(ecr_client, docker_client, account_id, aws_region, image_tags):
     """
     Given the name/tag of images in Docker Hub, mirror those images to ECR.
     """
@@ -117,20 +81,18 @@ def mirror_docker_hub_images_to_ecr(ecr_client, *, account_id, image_tags):
     for repo_name in missing_repos:
         ecr_client.create_repository(repositoryName=repo_name)
 
-    print("Authenticating Docker with ECR...")
-    docker_login_to_ecr(ecr_client, account_id=account_id)
-
     for hub_tag in image_tags:
-        ecr_tag = f"{account_id}.dkr.ecr.eu-west-1.amazonaws.com/{hub_tag}"
+        ecr_tag = f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com/{hub_tag}"
         print(f"Mirroring {hub_tag} to {ecr_tag}")
-        docker("pull", hub_tag)
-        docker("tag", hub_tag, ecr_tag)
-        docker("push", ecr_tag)
+        image = docker_client.images.pull("pull", hub_tag)
+        image.push(ecr_tag)
 
 
 def lambda_handler(event, context):
+    docker_client = docker.from_env()
     mirror_docker_hub_images_to_ecr(
-        ecr_client=boto3.client("ecr"), account_id=ACCOUNT_ID, image_tags=IMAGE_TAGS
+        ecr_client=boto3.client("ecr"), docker_client=docker_client,
+        account_id=ACCOUNT_ID, image_tags=IMAGE_TAGS
     )
 
 
