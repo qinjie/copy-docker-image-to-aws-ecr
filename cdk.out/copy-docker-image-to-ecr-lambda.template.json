@@ -1,0 +1,414 @@
+{
+  "Resources": {
+    "copydockerimagetoecrlambdaServiceRole980D1CC6": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ],
+        "PermissionsBoundary": "arn:aws:iam::904766938874:policy/GCCIAccountBoundary"
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/copy-docker-image-to-ecr-lambda/ServiceRole/Resource"
+      }
+    },
+    "copydockerimagetoecrlambda575DB5C1": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "copydockerimagetoecrlambdaLambdaSourceBucketNameParameter2A045169"
+          },
+          "S3Key": {
+            "Ref": "copydockerimagetoecrlambdaLambdaSourceObjectKeyParameter0E326C99"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrlambdaServiceRole980D1CC6",
+            "Arn"
+          ]
+        },
+        "Description": "Function for project copy-docker-image-to-ecr",
+        "Environment": {
+          "Variables": {
+            "AWS_ACCOUNT_ID": {
+              "Ref": "AWS::AccountId"
+            },
+            "IMAGE_TAGS": "node:12.16.1-alpine3.9,nginx:1.17.8-alpine"
+          }
+        },
+        "FunctionName": "copy-docker-image-to-ecr-lambda",
+        "Handler": "main.lambda_handler",
+        "Runtime": "python3.8"
+      },
+      "DependsOn": [
+        "copydockerimagetoecrlambdaServiceRole980D1CC6"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/copy-docker-image-to-ecr-lambda/Resource"
+      }
+    },
+    "copydockerimagetoecrlambdaCurrentVersionD62698BBd88aa237af26f344f18baf3fdca642b2": {
+      "Type": "AWS::Lambda::Version",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "copydockerimagetoecrlambda575DB5C1"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/copy-docker-image-to-ecr-lambda/CurrentVersion/Resource"
+      }
+    },
+    "LambdaAlias9C15A666": {
+      "Type": "AWS::Lambda::Alias",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "copydockerimagetoecrlambda575DB5C1"
+        },
+        "FunctionVersion": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrlambdaCurrentVersionD62698BBd88aa237af26f344f18baf3fdca642b2",
+            "Version"
+          ]
+        },
+        "Name": "uat"
+      },
+      "UpdatePolicy": {
+        "CodeDeployLambdaAliasUpdate": {
+          "ApplicationName": {
+            "Ref": "CodeDeployApplicationE587C27C"
+          },
+          "DeploymentGroupName": {
+            "Ref": "DeploymentGroup6D277AF0"
+          }
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/LambdaAlias/Resource"
+      }
+    },
+    "CodeDeployApplicationE587C27C": {
+      "Type": "AWS::CodeDeploy::Application",
+      "Properties": {
+        "ApplicationName": "copy-docker-image-to-ecr",
+        "ComputePlatform": "Lambda"
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/CodeDeployApplication/Resource"
+      }
+    },
+    "DeploymentGroupServiceRoleA00955F3": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "codedeploy.",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ".",
+                      {
+                        "Ref": "AWS::URLSuffix"
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSCodeDeployRoleForLambdaLimited"
+              ]
+            ]
+          }
+        ],
+        "PermissionsBoundary": "arn:aws:iam::904766938874:policy/GCCIAccountBoundary"
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/DeploymentGroup/ServiceRole/Resource"
+      }
+    },
+    "DeploymentGroup6D277AF0": {
+      "Type": "AWS::CodeDeploy::DeploymentGroup",
+      "Properties": {
+        "ApplicationName": {
+          "Ref": "CodeDeployApplicationE587C27C"
+        },
+        "ServiceRoleArn": {
+          "Fn::GetAtt": [
+            "DeploymentGroupServiceRoleA00955F3",
+            "Arn"
+          ]
+        },
+        "AutoRollbackConfiguration": {
+          "Enabled": true,
+          "Events": [
+            "DEPLOYMENT_FAILURE"
+          ]
+        },
+        "DeploymentConfigName": "CodeDeployDefault.LambdaLinear10PercentEvery1Minute",
+        "DeploymentStyle": {
+          "DeploymentOption": "WITH_TRAFFIC_CONTROL",
+          "DeploymentType": "BLUE_GREEN"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/DeploymentGroup/Resource"
+      }
+    },
+    "CDKMetadata": {
+      "Type": "AWS::CDK::Metadata",
+      "Properties": {
+        "Analytics": "v2:deflate64:H4sIAAAAAAAA/12QuwoCMRBFv8U+jq4ItoqijYWsYD8mI0TzWPJQJOTf3ey6KlZz58zlFFNBNZvBdLTEhx9zcZskbh1BOgbkN7a+mAM61BTIsZq8jY4TW1vjg4s8lPuXXkx7EDJIazIruqRQnwVC2kbDCy6dTz6R8282xJWS6AvoQmYSNaTaqk5eZmbcChLUKPuEtO/0q6ZRkuPg/137wqarazJh52xsSukP5ZyZacVw9ZN7NYdq0X7k6qUcu2iC1AR1P19ThNIuLgEAAA=="
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr-lambda/CDKMetadata/Default"
+      },
+      "Condition": "CDKMetadataAvailable"
+    }
+  },
+  "Parameters": {
+    "copydockerimagetoecrlambdaLambdaSourceBucketNameParameter2A045169": {
+      "Type": "String"
+    },
+    "copydockerimagetoecrlambdaLambdaSourceObjectKeyParameter0E326C99": {
+      "Type": "String"
+    }
+  },
+  "Conditions": {
+    "CDKMetadataAvailable": {
+      "Fn::Or": [
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "af-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-east-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-northeast-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-northeast-2"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-southeast-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-southeast-2"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ca-central-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "cn-north-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "cn-northwest-1"
+              ]
+            }
+          ]
+        },
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-central-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-north-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-west-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-west-2"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-west-3"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "me-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "sa-east-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-east-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-east-2"
+              ]
+            }
+          ]
+        },
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-west-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-west-2"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

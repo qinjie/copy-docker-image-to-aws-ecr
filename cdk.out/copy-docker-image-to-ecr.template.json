@@ -1,0 +1,1166 @@
+{
+  "Resources": {
+    "copydockerimagetoecrkey35013F97": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "KeyPolicy": {
+          "Statement": [
+            {
+              "Action": "kms:*",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              },
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": "arn:aws:iam::904766938874:role/AWSCodePipelineRole"
+              },
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-key/Resource"
+      }
+    },
+    "copydockerimagetoecrkeyAliasE325C11C": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": "alias/copy-docker-image-to-ecr-key",
+        "TargetKeyId": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrkey35013F97",
+            "Arn"
+          ]
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-key/Alias/Resource"
+      }
+    },
+    "CodePipelineRolePolicy31BC10B2": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrkey35013F97",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": "arn:aws:iam::904766938874:role/AWSCodePipelineRole"
+            },
+            {
+              "Action": [
+                "codebuild:BatchGetBuilds",
+                "codebuild:StartBuild",
+                "codebuild:StopBuild"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrCdkBuild2D8E6F09",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "codebuild:BatchGetBuilds",
+                "codebuild:StartBuild",
+                "codebuild:StopBuild"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrLambdaBuildD64B5AE5",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "PipelineDeployCodePipelineActionRole8B83082E",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "CodePipelineRolePolicy31BC10B2",
+        "Roles": [
+          "AWSCodePipelineRole"
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/CodePipelineRole/Policy/Resource"
+      }
+    },
+    "PipelineC660917D": {
+      "Type": "AWS::CodePipeline::Pipeline",
+      "Properties": {
+        "RoleArn": "arn:aws:iam::904766938874:role/AWSCodePipelineRole",
+        "Stages": [
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Source",
+                  "Owner": "ThirdParty",
+                  "Provider": "GitHub",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "Owner": "qinjie",
+                  "Repo": "copy-docker-image-to-ecr",
+                  "Branch": "main",
+                  "OAuthToken": "{{resolve:secretsmanager:GITHUB_MARKQJ:SecretString:::}}",
+                  "PollForSourceChanges": false
+                },
+                "Name": "GitHub_Source",
+                "OutputArtifacts": [
+                  {
+                    "Name": "Artifact_Source_GitHub_Source"
+                  }
+                ],
+                "RunOrder": 1
+              }
+            ],
+            "Name": "Source"
+          },
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Provider": "CodeBuild",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "ProjectName": {
+                    "Ref": "copydockerimagetoecrCdkBuild2D8E6F09"
+                  }
+                },
+                "InputArtifacts": [
+                  {
+                    "Name": "Artifact_Source_GitHub_Source"
+                  }
+                ],
+                "Name": "CDK_Build",
+                "OutputArtifacts": [
+                  {
+                    "Name": "Artifact_Build_CDK_Build"
+                  }
+                ],
+                "RoleArn": "arn:aws:iam::904766938874:role/AWSCodePipelineRole",
+                "RunOrder": 1
+              },
+              {
+                "ActionTypeId": {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Provider": "CodeBuild",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "ProjectName": {
+                    "Ref": "copydockerimagetoecrLambdaBuildD64B5AE5"
+                  }
+                },
+                "InputArtifacts": [
+                  {
+                    "Name": "Artifact_Source_GitHub_Source"
+                  }
+                ],
+                "Name": "Lambda_Build",
+                "OutputArtifacts": [
+                  {
+                    "Name": "Artifact_Build_Lambda_Build"
+                  }
+                ],
+                "RoleArn": "arn:aws:iam::904766938874:role/AWSCodePipelineRole",
+                "RunOrder": 1
+              }
+            ],
+            "Name": "Build"
+          },
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Deploy",
+                  "Owner": "AWS",
+                  "Provider": "CloudFormation",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "StackName": "copy-docker-image-to-ecr-lambda",
+                  "Capabilities": "CAPABILITY_NAMED_IAM",
+                  "RoleArn": "arn:aws:iam::904766938874:role/cdk-hnb659fds-cfn-exec-role-904766938874-ap-southeast-1",
+                  "ParameterOverrides": "{\"copydockerimagetoecrlambdaLambdaSourceBucketNameParameter2A045169\":{\"Fn::GetArtifactAtt\":[\"Artifact_Build_Lambda_Build\",\"BucketName\"]},\"copydockerimagetoecrlambdaLambdaSourceObjectKeyParameter0E326C99\":{\"Fn::GetArtifactAtt\":[\"Artifact_Build_Lambda_Build\",\"ObjectKey\"]}}",
+                  "ActionMode": "CREATE_UPDATE",
+                  "TemplatePath": "Artifact_Build_CDK_Build::copy-docker-image-to-ecr-lambda.template.json"
+                },
+                "InputArtifacts": [
+                  {
+                    "Name": "Artifact_Build_Lambda_Build"
+                  },
+                  {
+                    "Name": "Artifact_Build_CDK_Build"
+                  }
+                ],
+                "Name": "Deploy",
+                "RoleArn": {
+                  "Fn::GetAtt": [
+                    "PipelineDeployCodePipelineActionRole8B83082E",
+                    "Arn"
+                  ]
+                },
+                "RunOrder": 1
+              }
+            ],
+            "Name": "Deploy"
+          }
+        ],
+        "ArtifactStore": {
+          "EncryptionKey": {
+            "Id": {
+              "Fn::GetAtt": [
+                "copydockerimagetoecrkey35013F97",
+                "Arn"
+              ]
+            },
+            "Type": "KMS"
+          },
+          "Location": "cdk-artifactsbucket-904766938874-ap-southeast-1",
+          "Type": "S3"
+        },
+        "Name": "copy-docker-image-to-ecr"
+      },
+      "DependsOn": [
+        "CodePipelineRolePolicy31BC10B2"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/Pipeline/Resource"
+      }
+    },
+    "PipelineSourceGitHubSourceWebhookResource8EECEFFF": {
+      "Type": "AWS::CodePipeline::Webhook",
+      "Properties": {
+        "Authentication": "GITHUB_HMAC",
+        "AuthenticationConfiguration": {
+          "SecretToken": "{{resolve:secretsmanager:GITHUB_MARKQJ:SecretString:::}}"
+        },
+        "Filters": [
+          {
+            "JsonPath": "$.ref",
+            "MatchEquals": "refs/heads/{Branch}"
+          }
+        ],
+        "TargetAction": "GitHub_Source",
+        "TargetPipeline": {
+          "Ref": "PipelineC660917D"
+        },
+        "TargetPipelineVersion": 1,
+        "RegisterWithThirdParty": true
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/Pipeline/Source/GitHub_Source/WebhookResource"
+      }
+    },
+    "PipelineDeployCodePipelineActionRole8B83082E": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PermissionsBoundary": "arn:aws:iam::904766938874:policy/GCCIAccountBoundary"
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/Pipeline/Deploy/Deploy/CodePipelineActionRole/Resource"
+      }
+    },
+    "PipelineDeployCodePipelineActionRoleDefaultPolicyEE6D615B": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "iam:PassRole",
+              "Effect": "Allow",
+              "Resource": "arn:aws:iam::904766938874:role/cdk-hnb659fds-cfn-exec-role-904766938874-ap-southeast-1"
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrkey35013F97",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "cloudformation:CreateStack",
+                "cloudformation:DescribeStack*",
+                "cloudformation:GetStackPolicy",
+                "cloudformation:GetTemplate*",
+                "cloudformation:SetStackPolicy",
+                "cloudformation:UpdateStack",
+                "cloudformation:ValidateTemplate"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":cloudformation:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":stack/copy-docker-image-to-ecr-lambda/*"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "PipelineDeployCodePipelineActionRoleDefaultPolicyEE6D615B",
+        "Roles": [
+          {
+            "Ref": "PipelineDeployCodePipelineActionRole8B83082E"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/Pipeline/Deploy/Deploy/CodePipelineActionRole/DefaultPolicy/Resource"
+      }
+    },
+    "copydockerimagetoecrCdkBuildRole75E26A48": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "codebuild.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PermissionsBoundary": "arn:aws:iam::904766938874:policy/GCCIAccountBoundary"
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-CdkBuild/Role/Resource"
+      }
+    },
+    "copydockerimagetoecrCdkBuildRoleDefaultPolicy5A6904E2": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":logs:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":log-group:/aws/codebuild/",
+                      {
+                        "Ref": "copydockerimagetoecrCdkBuild2D8E6F09"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":logs:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":log-group:/aws/codebuild/",
+                      {
+                        "Ref": "copydockerimagetoecrCdkBuild2D8E6F09"
+                      },
+                      ":*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codebuild:CreateReportGroup",
+                "codebuild:CreateReport",
+                "codebuild:UpdateReport",
+                "codebuild:BatchPutTestCases",
+                "codebuild:BatchPutCodeCoverages"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":codebuild:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":report-group/",
+                    {
+                      "Ref": "copydockerimagetoecrCdkBuild2D8E6F09"
+                    },
+                    "-*"
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrkey35013F97",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrkey35013F97",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "copydockerimagetoecrCdkBuildRoleDefaultPolicy5A6904E2",
+        "Roles": [
+          {
+            "Ref": "copydockerimagetoecrCdkBuildRole75E26A48"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-CdkBuild/Role/DefaultPolicy/Resource"
+      }
+    },
+    "copydockerimagetoecrCdkBuild2D8E6F09": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Artifacts": {
+          "Type": "CODEPIPELINE"
+        },
+        "Environment": {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:5.0",
+          "ImagePullCredentialsType": "CODEBUILD",
+          "PrivilegedMode": false,
+          "Type": "LINUX_CONTAINER"
+        },
+        "ServiceRole": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrCdkBuildRole75E26A48",
+            "Arn"
+          ]
+        },
+        "Source": {
+          "BuildSpec": "{\n  \"version\": \"0.2\",\n  \"phases\": {\n    \"install\": {\n      \"commands\": \"npm install\"\n    },\n    \"build\": {\n      \"commands\": [\n        \"npm run build\",\n        \"npm run cdk synth -- -o dist\"\n      ]\n    }\n  },\n  \"artifacts\": {\n    \"base-directory\": \"dist\",\n    \"files\": [\n      \"*.template.json\"\n    ]\n  }\n}",
+          "Type": "CODEPIPELINE"
+        },
+        "EncryptionKey": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrkey35013F97",
+            "Arn"
+          ]
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-CdkBuild/Resource"
+      }
+    },
+    "copydockerimagetoecrLambdaBuildRole7B953ACD": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "codebuild.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PermissionsBoundary": "arn:aws:iam::904766938874:policy/GCCIAccountBoundary"
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-LambdaBuild/Role/Resource"
+      }
+    },
+    "copydockerimagetoecrLambdaBuildRoleDefaultPolicyBE9EF53F": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":logs:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":log-group:/aws/codebuild/",
+                      {
+                        "Ref": "copydockerimagetoecrLambdaBuildD64B5AE5"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":logs:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":log-group:/aws/codebuild/",
+                      {
+                        "Ref": "copydockerimagetoecrLambdaBuildD64B5AE5"
+                      },
+                      ":*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codebuild:CreateReportGroup",
+                "codebuild:CreateReport",
+                "codebuild:UpdateReport",
+                "codebuild:BatchPutTestCases",
+                "codebuild:BatchPutCodeCoverages"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":codebuild:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":report-group/",
+                    {
+                      "Ref": "copydockerimagetoecrLambdaBuildD64B5AE5"
+                    },
+                    "-*"
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::cdk-artifactsbucket-904766938874-ap-southeast-1/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrkey35013F97",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "copydockerimagetoecrkey35013F97",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "copydockerimagetoecrLambdaBuildRoleDefaultPolicyBE9EF53F",
+        "Roles": [
+          {
+            "Ref": "copydockerimagetoecrLambdaBuildRole7B953ACD"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-LambdaBuild/Role/DefaultPolicy/Resource"
+      }
+    },
+    "copydockerimagetoecrLambdaBuildD64B5AE5": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Artifacts": {
+          "Type": "CODEPIPELINE"
+        },
+        "Environment": {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:5.0",
+          "ImagePullCredentialsType": "CODEBUILD",
+          "PrivilegedMode": false,
+          "Type": "LINUX_CONTAINER"
+        },
+        "ServiceRole": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrLambdaBuildRole7B953ACD",
+            "Arn"
+          ]
+        },
+        "Source": {
+          "BuildSpec": "{\n  \"version\": \"0.2\",\n  \"phases\": {\n    \"install\": {\n      \"commands\": [\n        \"pip install -r ./lambda/requirements.txt -t ./lambda\"\n      ]\n    },\n    \"build\": {}\n  },\n  \"artifacts\": {\n    \"base-directory\": \"./lambda\",\n    \"files\": [\n      \"**/*\"\n    ]\n  }\n}",
+          "Type": "CODEPIPELINE"
+        },
+        "EncryptionKey": {
+          "Fn::GetAtt": [
+            "copydockerimagetoecrkey35013F97",
+            "Arn"
+          ]
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/copy-docker-image-to-ecr-LambdaBuild/Resource"
+      }
+    },
+    "CDKMetadata": {
+      "Type": "AWS::CDK::Metadata",
+      "Properties": {
+        "Analytics": "v2:deflate64:H4sIAAAAAAAA/02QwW7DIAyGn2V36i5dpV239thLlB16psTTHAiuMGyqEO9eSCqtp/9DfMbYHXS7Hby+fOg/2ZjRbrPhgJC/ojZWHdlLDMlENaBwCgbV8ds/czVGisS+qPZCtrNAPuGt3bX4dKSlHRYoSt7gkIzFeNCCivQMuWdHZil40MBu7VOzKMMjXumKjnz9V/+gRX/iM15+mO2qXxK58d/tA09YZ2glK5ZSlK8iTLL97fbQvdcVTEK0CclHmhGGNe/+0F59HwEAAA=="
+      },
+      "Metadata": {
+        "aws:cdk:path": "copy-docker-image-to-ecr/CDKMetadata/Default"
+      },
+      "Condition": "CDKMetadataAvailable"
+    }
+  },
+  "Conditions": {
+    "CDKMetadataAvailable": {
+      "Fn::Or": [
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "af-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-east-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-northeast-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-northeast-2"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-southeast-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ap-southeast-2"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "ca-central-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "cn-north-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "cn-northwest-1"
+              ]
+            }
+          ]
+        },
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-central-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-north-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-west-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-west-2"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "eu-west-3"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "me-south-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "sa-east-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-east-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-east-2"
+              ]
+            }
+          ]
+        },
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-west-1"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                {
+                  "Ref": "AWS::Region"
+                },
+                "us-west-2"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
