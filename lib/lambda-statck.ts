@@ -1,8 +1,7 @@
 import * as codedeploy from "@aws-cdk/aws-codedeploy";
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as cdk from "@aws-cdk/core";
-import * as path from "path";
-import { loadEnv } from "../cdk-common/stack-utils";
+import * as iam from "@aws-cdk/aws-iam";
 
 export interface LambdaStackProps extends cdk.StackProps {
   project_code: string;
@@ -43,6 +42,12 @@ export class LambdaStack extends cdk.Stack {
       environment: props.environment,
       functionName: `${props.project_code}-lambda`,
     });
+
+    func.role?.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName(
+        "AmazonEC2ContainerRegistryPowerUser"
+      )
+    );
 
     const alias = new lambda.Alias(this, "LambdaAlias", {
       aliasName: "uat",
